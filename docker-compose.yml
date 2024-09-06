@@ -1,0 +1,6 @@
+﻿services:
+  focal.movies.api:
+    image: focal.movies.api
+    build:
+      context: .
+      dockerfile: Focal.Movies.API/Dockerfile
