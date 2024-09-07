@@ -22,13 +22,16 @@ public static class DataRowExtensions
                 {
                     columnName = nameAttribute.Names.First();
                 }
+
                 if (row.Table.Columns.Contains(columnName) && row[columnName] != DBNull.Value)
                 {
-                    prop.SetValue(obj, Convert.ChangeType(row[prop.Name], prop.PropertyType));
+                    prop.SetValue(obj, Convert.ChangeType(row[columnName], prop.PropertyType));
                 }
             }
+
             list.Add(obj);
         }
+
         return list;
     }
 }
