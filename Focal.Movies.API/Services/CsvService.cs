@@ -1,10 +1,8 @@
 using System.Data;
 using System.Globalization;
 using System.Linq.Expressions;
-using System.Reflection;
 using CsvHelper;
 using Focal.Movies.API.Extensions;
-using Focal.Movies.API.Models;
 
 namespace Focal.Movies.API.Services;
 
@@ -13,6 +11,7 @@ public abstract class CsvService<TModel> : IHostedService, IDisposable
 {
     private readonly string _filePath;
     private readonly DataTable _dataTable;
+    private bool _fileWrote;
 
     protected CsvService(string filePath, IEnumerable<ColumnConfiguration> columnConfigurations)
     {
@@ -44,6 +43,19 @@ public abstract class CsvService<TModel> : IHostedService, IDisposable
             .ToList<TModel>();
     }
 
+    public TModel? FirstOrDefault<TProperty>(
+        Expression<Func<TModel, bool>>? predicate = null,
+        Expression<Func<TModel, TProperty>>? sortExpression = null,
+        bool ascending = true)
+    {
+        var filterExpression = predicate?.ToFilterExpression();
+        var sort = sortExpression?.ToSortExpression(ascending);
+        return _dataTable
+            .Select(filterExpression: filterExpression, sort: sort)
+            .ToList<TModel>()
+            .FirstOrDefault();
+    }
+
     public void Add(TModel model)
     {
         _dataTable.AddRow(model);
@@ -57,6 +69,10 @@ public abstract class CsvService<TModel> : IHostedService, IDisposable
     
     private void WriteCsv()
     {
+        if (_fileWrote)
+        {
+            return;
+        }
         using var stream = new FileStream(_filePath, FileMode.Truncate);
         using var writer = new StreamWriter(stream);
         using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
@@ -76,6 +92,8 @@ public abstract class CsvService<TModel> : IHostedService, IDisposable
 
             csv.NextRecord();
         }
+
+        _fileWrote = true;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
