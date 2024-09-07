@@ -40,6 +40,36 @@ public class MoviesController(MetadataService metadataService, StatsService stat
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {
-        return Ok();
+        var stats = statsService.GetAll<object>();
+        var moviesStatsAvrage = stats
+            .GroupBy(s => s.MovieId)
+            .Select(g => new
+            {
+                MovieId = g.Key,
+                AverageWatchDurationS = g.Sum(w => w.WatchDurationMs) / g.Count(),
+                Watches = g.Count()
+            })
+            .OrderByDescending(ms => ms.Watches);
+        var moviesStats = new List<MovieStats>();
+        foreach (var movieStatAverage in moviesStatsAvrage)
+        {
+            var movieId = movieStatAverage.MovieId;
+            var defaultLanguage = "EN";
+            var movieMetadata = metadataService.FirstOrDefault<object>(m => m.MovieId == movieId && m.Language == defaultLanguage);
+
+            //Added Cause movieId 8 in stats but not found in metadata
+            if (movieMetadata != null)
+            {
+                moviesStats.Add(new MovieStats
+                {
+                    MovieId = movieStatAverage.MovieId,
+                    ReleaseYear = movieMetadata.ReleaseYear,
+                    Title = movieMetadata.Title,
+                    AverageWatchDurationS = movieStatAverage.AverageWatchDurationS,
+                    Watches = movieStatAverage.Watches
+                });
+            }
+        }
+        return Ok(moviesStats);
     }
 }
