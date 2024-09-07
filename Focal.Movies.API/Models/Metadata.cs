@@ -1,6 +1,3 @@
-using System.Data;
-using CsvHelper.Configuration.Attributes;
-
 namespace Focal.Movies.API.Models;
 
 public class Metadata
