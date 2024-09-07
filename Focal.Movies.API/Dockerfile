@@ -1,23 +1,23 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
-WORKDIR /app
-EXPOSE 5021
-EXPOSE 7242
-
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
+﻿FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.20 AS build
 WORKDIR /src
+
 COPY ["Focal.Movies.API/Focal.Movies.API.csproj", "Focal.Movies.API/"]
 RUN dotnet restore "Focal.Movies.API/Focal.Movies.API.csproj"
+
 COPY . .
-WORKDIR "/src/Focal.Movies.API"
-RUN dotnet build "Focal.Movies.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
-FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Focal.Movies.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "Focal.Movies.API/Focal.Movies.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.20 AS final
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
+
+RUN mkdir -p /app/Csvs \
+    && chown -R appuser:appgroup /app/Csvs \
+    && chmod -R 755 /app/Csvs
+
+USER appuser
+EXPOSE 8080
 ENTRYPOINT ["dotnet", "Focal.Movies.API.dll"]
