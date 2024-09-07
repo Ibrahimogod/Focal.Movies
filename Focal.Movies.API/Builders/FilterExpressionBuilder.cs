@@ -6,42 +6,15 @@ public static class FilterExpressionBuilder
 {
     public static string FromExpression<TModel>(Expression<Func<TModel, bool>> expression)
     {
-        if (expression.Body is BinaryExpression binaryExpression)
-        {
-            return ProcessBinaryExpression(binaryExpression);
-        }
-
-        throw new NotSupportedException("Only binary expressions are supported in this example.");
-    }
-
-    private static string ProcessBinaryExpression(BinaryExpression binaryExpression)
-    {
-        var left = ProcessExpression(binaryExpression.Left);
-        var right = ProcessExpression(GetConstantExpression(binaryExpression.Right));
-        var @operator = GetOperator(binaryExpression.NodeType);
-
-        return $"({left} {@operator} {right})";
-    }
-
-    private static ConstantExpression GetConstantExpression(Expression expression)
-    {
-        if (expression is MemberExpression { Expression: ConstantExpression } memberExpression)
-        {
-            var lambda = Expression.Lambda<Func<object>>(Expression.Convert(memberExpression, typeof(object)));
-
-            var compiledLambda = lambda.Compile();
-
-            var value = compiledLambda();
-            return Expression.Constant(value);
-        }
-        
-        throw new NotSupportedException("Unsupported member type.");
+        return ProcessExpression(expression.Body);
     }
 
     private static string ProcessExpression(Expression expression)
     {
         switch (expression)
         {
+            case BinaryExpression binaryExpression:
+                return ProcessBinaryExpression(binaryExpression);
             case MemberExpression memberExpression:
                 return ProcessMemberExpression(memberExpression);
             case ConstantExpression constantExpression:
@@ -53,9 +26,31 @@ public static class FilterExpressionBuilder
         }
     }
 
+    private static string ProcessBinaryExpression(BinaryExpression binaryExpression)
+    {
+        var left = ProcessExpression(binaryExpression.Left);
+        var right = ProcessExpression(binaryExpression.Right);
+        var @operator = GetOperator(binaryExpression.NodeType);
+
+        return $"({left} {@operator} {right})";
+    }
+
     private static string ProcessMemberExpression(MemberExpression memberExpression)
     {
+        if (memberExpression.Expression is ConstantExpression)
+        {
+            return ProcessConstantExpression(GetConstantExpression(memberExpression));
+        }
+
         return memberExpression.Member.Name;
+    }
+
+    private static ConstantExpression GetConstantExpression(MemberExpression memberExpression)
+    {
+        var lambda = Expression.Lambda<Func<object>>(Expression.Convert(memberExpression, typeof(object)));
+        var compiledLambda = lambda.Compile();
+        var value = compiledLambda();
+        return Expression.Constant(value);
     }
 
     private static string ProcessConstantExpression(ConstantExpression constantExpression)
@@ -89,6 +84,8 @@ public static class FilterExpressionBuilder
             ExpressionType.GreaterThanOrEqual => ">=",
             ExpressionType.LessThan => "<",
             ExpressionType.LessThanOrEqual => "<=",
+            ExpressionType.AndAlso => "AND",
+            ExpressionType.OrElse => "OR",
             _ => throw new NotSupportedException($"Operator '{nodeType}' is not supported.")
         };
     }
