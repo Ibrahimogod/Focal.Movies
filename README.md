@@ -16,3 +16,19 @@ Navigate to the root of the project directory and build the Docker image using:
 
 ```bash
 docker build -t focal-movies-api -f .\Focal.Movies.API\Dockerfile .
+```
+start spawn a container using created image name and bind it to a free port on your machine
+
+```bash
+docker run -p 5021:8080 --name focal-movies-api-container focal-movies-api
+```
+
+### Access the API
+
+navigate to the mapped local port (5021, change it if you need to) and use swagger endpoint
+
+- [Swagger](http://localhost:5021/swagger)
+
+Now you're good to go 😉
+
+Start using the api from swagger
